@@ -1,142 +1,113 @@
 import numpy as np
-import math
 
-def estimate_panel_misalignment(a1_deg, b1_deg, p1, a2_deg, b2_deg, p2):
-    """
-    Estimate the installation error angles of an antenna panel from two corner reflectors.
 
-    Parameters:
-    a1_deg (float): Azimuth angle to reflector 1 in degrees
-    b1_deg (float): Elevation angle to reflector 1 in degrees
-    p1 (list or np.array): Global coordinates of reflector 1 [x1, y1, z1]
-    a2_deg (float): Azimuth angle to reflector 2 in degrees
-    b2_deg (float): Elevation angle to reflector 2 in degrees
-    p2 (list or np.array): Global coordinates of reflector 2 [x2, y2, z2]
+ALPHA0_DEG = 0.0
+BETA0_DEG = 30.0
+GAMMA0_DEG = 0.0
 
-    Returns:
-    tuple: (alpha_deg, beta_deg, gamma_deg, R) where R is the rotation matrix
-    """
-    # Convert inputs to numpy arrays
-    p1 = np.array(p1, dtype=float)
-    p2 = np.array(p2, dtype=float)
 
-    # Convert angles to radians
-    a1 = math.radians(a1_deg)
-    b1 = math.radians(b1_deg)
-    a2 = math.radians(a2_deg)
-    b2 = math.radians(b2_deg)
+def normalize(vector):
+    vector = np.array(vector, dtype=float)
+    return vector / np.linalg.norm(vector)
 
-    # Step 1: Build local unit vectors from measured angles
-    v1 = np.array([
-        math.sin(a1) * math.cos(b1),
-        math.cos(a1) * math.cos(b1),
-        math.sin(b1)
-    ])
-    v2 = np.array([
-        math.sin(a2) * math.cos(b2),
-        math.cos(a2) * math.cos(b2),
-        math.sin(b2)
-    ])
 
-    # Step 2: Build global unit vectors from reflector coordinates
-    d1 = p1
-    d2 = p2
+def vector_from_angles(a_deg, b_deg):
+    a_rad = np.radians(a_deg)
+    b_rad = np.radians(b_deg)
+    return np.array(
+        [
+            np.sin(a_rad) * np.cos(b_rad),
+            np.cos(a_rad) * np.cos(b_rad),
+            np.sin(b_rad),
+        ],
+        dtype=float,
+    )
 
-    # Check for zero norm
-    norm_d1 = np.linalg.norm(d1)
-    norm_d2 = np.linalg.norm(d2)
-    if norm_d1 == 0 or norm_d2 == 0:
-        raise ValueError("Reflector coordinates must not be at the origin.")
 
-    u1 = d1 / norm_d1
-    u2 = d2 / norm_d2
+def orthonormal_basis(first_vector, second_vector):
+    e1 = first_vector
+    t = second_vector - np.dot(second_vector, first_vector) * first_vector
+    e2 = t / np.linalg.norm(t)
+    e3 = np.cross(e1, e2)
+    return np.column_stack((e1, e2, e3))
 
-    # Step 3: Recover the rotation matrix
-    # Local basis
-    e1_l = v1
-    proj = np.dot(v2, v1) * v1
-    t_l = v2 - proj
-    norm_t_l = np.linalg.norm(t_l)
-    if norm_t_l < 1e-6:
-        raise ValueError("Local vectors are nearly collinear.")
-    e2_l = t_l / norm_t_l
-    e3_l = np.cross(e1_l, e2_l)
-    E_l = np.column_stack([e1_l, e2_l, e3_l])
 
-    # Global basis
-    e1_g = u1
-    proj_g = np.dot(u2, u1) * u1
-    t_g = u2 - proj_g
-    norm_t_g = np.linalg.norm(t_g)
-    if norm_t_g < 1e-6:
-        raise ValueError("Global vectors are nearly collinear.")
-    e2_g = t_g / norm_t_g
-    e3_g = np.cross(e1_g, e2_g)
-    E_g = np.column_stack([e1_g, e2_g, e3_g])
+def estimate_panel_corrections(P1, P2, a1_deg, b1_deg, a2_deg, b2_deg):
+    d1 = np.array(P1, dtype=float)
+    d2 = np.array(P2, dtype=float)
 
-    # Rotation matrix
+    u1 = normalize(d1)
+    u2 = normalize(d2)
+
+    v1 = vector_from_angles(a1_deg, b1_deg)
+    v2 = vector_from_angles(a2_deg, b2_deg)
+
+    E_l = orthonormal_basis(v1, v2)
+    E_g = orthonormal_basis(u1, u2)
+
     R = E_g @ E_l.T
 
-    # Optional orthogonality check
-    RTR = R.T @ R
-    det_R = np.linalg.det(R)
-    if not np.allclose(RTR, np.eye(3), atol=1e-6) or not np.isclose(det_R, 1.0, atol=1e-6):
-        raise ValueError("Computed rotation matrix is not orthogonal or has wrong determinant.")
+    beta_rad = np.arcsin(R[2, 1])
+    alpha_rad = np.arctan2(R[0, 1], R[1, 1])
+    gamma_rad = np.arctan2(-R[2, 0], R[2, 2])
 
-    # Step 4: Extract angles
-    beta = math.asin(R[2, 1])  # R[2,1] in 0-based indexing
-    alpha = math.atan2(R[0, 1], R[1, 1])
-    gamma = math.atan2(-R[2, 0], R[2, 2])
+    alpha_deg = np.degrees(alpha_rad)
+    beta_deg = np.degrees(beta_rad)
+    gamma_deg = np.degrees(gamma_rad)
 
-    # Convert to degrees
-    alpha_deg = math.degrees(alpha)
-    beta_deg = math.degrees(beta)
-    gamma_deg = math.degrees(gamma)
+    dAlpha_deg = alpha_deg - ALPHA0_DEG
+    dBeta_deg = beta_deg - BETA0_DEG
+    dGamma_deg = gamma_deg - GAMMA0_DEG
 
-    return alpha_deg, beta_deg, gamma_deg, R
+    return {
+        "alpha_deg": alpha_deg,
+        "beta_deg": beta_deg,
+        "gamma_deg": gamma_deg,
+        "dAlpha_deg": dAlpha_deg,
+        "dBeta_deg": dBeta_deg,
+        "dGamma_deg": dGamma_deg,
+        "R": R,
+    }
 
-# Demonstration example
+
+def print_result(result):
+    print()
+    print("Результаты расчёта:")
+    print(f"alpha_deg  = {result['alpha_deg']:.6f}")
+    print(f"beta_deg   = {result['beta_deg']:.6f}")
+    print(f"gamma_deg  = {result['gamma_deg']:.6f}")
+    print(f"dAlpha_deg = {result['dAlpha_deg']:.6f}")
+    print(f"dBeta_deg  = {result['dBeta_deg']:.6f}")
+    print(f"dGamma_deg = {result['dGamma_deg']:.6f}")
+    print()
+    print("Матрица поворота R:")
+    print(result["R"])
+
+
+def main():
+    print("Программа расчёта поправок антенного полотна по двум точкам")
+    print("Введите данные последовательно.")
+    print()
+
+    x1 = float(input("Точка 1, X = "))
+    y1 = float(input("Точка 1, Y = "))
+    z1 = float(input("Точка 1, Z = "))
+    a1_deg = float(input("Точка 1, азимут a, градусы = "))
+    b1_deg = float(input("Точка 1, угол места b, градусы = "))
+    print()
+
+    x2 = float(input("Точка 2, X = "))
+    y2 = float(input("Точка 2, Y = "))
+    z2 = float(input("Точка 2, Z = "))
+    a2_deg = float(input("Точка 2, азимут a, градусы = "))
+    b2_deg = float(input("Точка 2, угол места b, градусы = "))
+
+    P1 = np.array([x1, y1, z1], dtype=float)
+    P2 = np.array([x2, y2, z2], dtype=float)
+
+    result = estimate_panel_corrections(P1, P2, a1_deg, b1_deg, a2_deg, b2_deg)
+    print_result(result)
+
+
 if __name__ == "__main__":
-    print("Программа для оценки ошибки установки антенной панели на основе двух уголковых отражателей.")
-    print("=" * 70)
-
-    try:
-        # Ввод данных для первого отражателя
-        print("\nВведите данные для первого уголкового отражателя:")
-        a1_deg = float(input("Азимут (в градусах): "))
-        b1_deg = float(input("Угол места (в градусах): "))
-        x1 = float(input("Координата X: "))
-        y1 = float(input("Координата Y: "))
-        z1 = float(input("Координата Z: "))
-        p1 = [x1, y1, z1]
-
-        # Ввод данных для второго отражателя
-        print("\nВведите данные для второго уголкового отражателя:")
-        a2_deg = float(input("Азимут (в градусах): "))
-        b2_deg = float(input("Угол места (в градусах): "))
-        x2 = float(input("Координата X: "))
-        y2 = float(input("Координата Y: "))
-        z2 = float(input("Координата Z: "))
-        p2 = [x2, y2, z2]
-
-        # Вызов функции
-        alpha, beta, gamma, R = estimate_panel_misalignment(a1_deg, b1_deg, p1, a2_deg, b2_deg, p2)
-
-        # Вывод результатов
-        print("\n" + "=" * 70)
-        print("Результаты оценки ошибки установки антенной панели:")
-        print(f"Азимутальная ошибка (alpha): {alpha:.2f} градусов")
-        print(f"Ошибка по углу места (beta): {beta:.2f} градусов")
-        print(f"Ошибка поворота вокруг нормали (gamma): {gamma:.2f} градусов")
-        print("\nМатрица поворота R:")
-        print(R)
-
-    except ValueError as e:
-        print(f"\nОшибка ввода или расчета: {e}")
-        print("Проверьте введенные данные (должны быть числа) и убедитесь, что векторы не коллинеарны и координаты не в начале координат.")
-    except Exception as e:
-        print(f"\nНеожиданная ошибка: {e}")
-
-    # Дополнительные тесты (опционально, закомментированы)
-    # print("\n--- Тестовые случаи ---")
-    # ... (старые тесты)
+    main()
