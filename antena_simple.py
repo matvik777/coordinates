@@ -72,8 +72,6 @@ def estimate_panel_orientation(center, point1, point2, a1_deg, b1_deg, a2_deg, b
     dBeta_deg = np.rad2deg(beta_err)
     dGamma_deg = np.rad2deg(gamma_err)
 
-  
-
     return {
         "R_err": R_err,
         "dAlpha_deg": dAlpha_deg,
@@ -88,26 +86,26 @@ def estimate_panel_orientation(center, point1, point2, a1_deg, b1_deg, a2_deg, b
 
 if __name__ == "__main__":
     print("Программа определения ориентации полотна по двум точкам")
-    print("Введите данные последовательно.\n")
+    print("Задайте данные в коде ниже.\n")
 
     # Центр полотна
-    xc = float(input("Центр полотна, X = "))
-    yc = float(input("Центр полотна, Y = "))
-    zc = float(input("Центр полотна, Z = "))
+    xc = 0.0
+    yc = 0.0
+    zc = 33.0
 
     # Точка 1
-    x1 = float(input("\nТочка 1, X = "))
-    y1 = float(input("Точка 1, Y = "))
-    z1 = float(input("Точка 1, Z = "))
-    a1 = float(input("Точка 1, азимут a, градусы = "))
-    b1 = float(input("Точка 1, угол места b, градусы = "))
+    x1 = -280.0
+    y1 = 500.0
+    z1 = -3.0
+    a1 = -30.9
+    b1 = -34.45
 
     # Точка 2
-    x2 = float(input("\nТочка 2, X = "))
-    y2 = float(input("Точка 2, Y = "))
-    z2 = float(input("Точка 2, Z = "))
-    a2 = float(input("Точка 2, азимут a, градусы = "))
-    b2 = float(input("Точка 2, угол места b, градусы = "))
+    x2 = 350
+    y2 = 760
+    z2 = 0
+    a2 = 33.45
+    b2 = -29.43
 
     result = estimate_panel_orientation(
         center=[xc, yc, zc],
@@ -119,7 +117,6 @@ if __name__ == "__main__":
         b2_deg=b2
     )
 
-    
     print("\nПоправки относительно штатного положения:")
     print(f"dAlpha_deg = {result['dAlpha_deg']:.6f}")
     print(f"dBeta_deg  = {result['dBeta_deg']:.6f}")

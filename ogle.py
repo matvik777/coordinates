@@ -83,22 +83,22 @@ def simulate_panel_measurement(center, point, alpha_deg, beta_deg, gamma_deg, be
 if __name__ == "__main__":
     print("Программа моделирования измерения одной точки полотном")
     print("Штатное положение полотна: угол места 30 градусов в глобальной системе")
-    print("Введите данные последовательно.\n")
+    print("Задайте данные в коде ниже.\n")
 
     # Центр полотна
-    xc = float(input("Центр полотна, X = "))
-    yc = float(input("Центр полотна, Y = "))
-    zc = float(input("Центр полотна, Z = "))
+    xc = 0.0
+    yc = 0.0
+    zc = 33.0
 
     # Точка
-    x = float(input("\nТочка, X = "))
-    y = float(input("Точка, Y = "))
-    z = float(input("Точка, Z = "))
+    x = -280.0
+    y = 500.0
+    z = -8.0
 
     # Поправки относительно штатного положения
-    alpha_deg = float(input("\nПоправка alpha вокруг Z, градусы = "))
-    beta_deg = float(input("Поправка beta вокруг X, градусы = "))
-    gamma_deg = float(input("Поправка gamma вокруг Y, градусы = "))
+    alpha_deg = 0.0
+    beta_deg = 0.0
+    gamma_deg = 0.0
 
     result = simulate_panel_measurement(
         center=[xc, yc, zc],

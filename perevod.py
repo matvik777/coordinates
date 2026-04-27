@@ -66,16 +66,16 @@ def correct_measurement_to_nominal(a_bad_deg, b_bad_deg, d_alpha_deg, d_beta_deg
 
 if __name__ == "__main__":
     print("Программа перевода измерения из кривого полотна в ровное")
-    print("Введите данные последовательно.\n")
+    print("Задайте данные в коде ниже.\n")
 
     # Что дало кривое полотно
-    a_bad_deg = float(input("Азимут кривого полотна a_bad, градусы = "))
-    b_bad_deg = float(input("Угол места кривого полотна b_bad, градусы = "))
+    a_bad_deg = 10.0
+    b_bad_deg = 5.0
 
     # Найденные поправки
-    d_alpha_deg = float(input("\nПоправка dAlpha, градусы = "))
-    d_beta_deg = float(input("Поправка dBeta, градусы = "))
-    d_gamma_deg = float(input("Поправка dGamma, градусы = "))
+    d_alpha_deg = 1.0
+    d_beta_deg = 2.0
+    d_gamma_deg = 3.0
 
     result = correct_measurement_to_nominal(
         a_bad_deg=a_bad_deg,
